@@ -70,6 +70,8 @@ class AuthController extends Controller
                 [ 'password' => bcrypt($request->password)]
             ));
 
+//        return view();
+
         return response()->json([
             'message' => 'User successfully registered',
             'user' => $user
