@@ -6,53 +6,34 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Tymon\JWTAuth\Exceptions\TokenInvalidException;
 
 class AuthController extends Controller
 {
     /**
-     * Create a new AuthController instance.
-     *
-     * @return void
-     */
-    public function __construct()
-    {
-        $this->middleware('auth:api', ['except' => [
-            'login',
-            'register'
-        ]]);
-    }
-
-    /**
      * Get a JWT via given credentials.
      *
      * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
      */
-    public function login(Request $request): \Illuminate\Http\JsonResponse
+    public function login(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'password' => 'required|string|min:6'
-        ]);
+        $creds = $request->only(['email', 'password']);
 
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+        if (!$token = auth()->attempt($creds)) {
+            return response()->json(['error' => 'Incorrect credentials'], 401);
         }
 
-        if (! $token = auth()->attempt($validator->validated())) {
-            return response()->json(['error' => 'Unauthorized'], 401);
-        }
-
-        return $this->createNewToken($token);
+        return response()->json(['token' => $token]);
     }
 
     /**
      * Register a User.
      *
      * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
      */
-    public function register(Request $request): \Illuminate\Http\JsonResponse
+    public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|between:2,100',
@@ -64,32 +45,25 @@ class AuthController extends Controller
             return response()->json($validator->errors()->toJson(), 400);
         }
 
-        $user = User::query()
+        User::query()
             ->create(array_merge(
                 $validator->validated(),
                 [ 'password' => bcrypt($request->password)]
             ));
 
-//        return view();
-
-        return response()->json([
-            'message' => 'User successfully registered',
-            'user' => $user
-        ], 201);
+        return redirect()->route('city-trips.index');
     }
 
     /**
      * Log the user out (Invalidate the token).
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return \Illuminate\Http\RedirectResponse
      */
-    public function logout(): \Illuminate\Http\JsonResponse
+    public function logout(): \Illuminate\Http\RedirectResponse
     {
         auth()->logout();
 
-        return response()->json([
-            'message' => 'User successfully signed out'
-        ]);
+        return redirect('/');
     }
 
     /**
@@ -99,7 +73,13 @@ class AuthController extends Controller
      */
     public function refresh(): \Illuminate\Http\JsonResponse
     {
-        return $this->createNewToken(auth()->refresh());
+        try {
+            $newToken = auth()->refresh();
+        } catch (TokenInvalidException $e) {
+            return response()->json(['error' => $e->getMessage()]);
+        }
+
+        return response()->json(['token' => $newToken], 401);
     }
 
     /**

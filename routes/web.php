@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\CityTripsController;
+use App\Http\Controllers\AuthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,3 +26,6 @@ Route::get('login', function () {
 Route::get('register', function () {
     return view('pages.register');
 })->name('register');
+
+Route::get('city-trips', [CityTripsController::class, 'index'])->name('city-trips.index');
+

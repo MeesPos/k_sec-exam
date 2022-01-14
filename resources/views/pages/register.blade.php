@@ -19,7 +19,9 @@
 
                 <div>
                     <div class="mt-6">
-                        <form action="{{ config('app.url') . '/api/auth/register' }}" method="POST" class="space-y-6">
+                        <form action="{{ route('auth.register') }}" method="POST" class="space-y-6">
+                            @csrf
+
                             <div>
                                 <label for="name" class="block text-sm font-medium text-gray-700">
                                     Naam
